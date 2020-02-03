@@ -7,6 +7,8 @@ excerpt: "Building a CLI which will compress and encrypt a file using a password
 
 _I received good feedback from some kind Reddit users who pointed out that there are a few implementation errors. You can read the thread [here](https://old.reddit.com/r/javascript/comments/8doo5t/lets_encrypt_files_with_node/). If you're coming from little to no knowledge on encryption, there is still a lot you can learn in this article, but don't use the code you find here in a production system. Without further ado…_
 
+---
+
 We're going to build a CLI program which will allow us to compress and encrypt a file using a password, and then decrypt and uncompress that file using that same password. We'll be doing it entirely in Node with no external dependencies.
 
 Overall, the plan is to:
@@ -34,7 +36,7 @@ What we'll be learning
 
 Sound good? Let's get started.
 
-_*If you just want to see the source code, it's on github [here](https://github.com/bbstilson/node-encryption).*_
+_**If you just want to see the source code, it's on Github [here](https://github.com/bbstilson/node-encryption).**_
 
 ## Part 0: Preparing our project
 
@@ -498,7 +500,7 @@ There's a lot that could be added, improved, and extended.
 
 ### Moar encryption
 
-We really should 'sign' the file using an HMAC algorithm. HMAC, or Hash Message Authentication Code, is a means of verifying the authenticity of a message and that it's contents haven't been tampered with. This would be a simple extension, but this tutorial was already long as heck. You can read more about it here.
+We really should 'sign' the file using an HMAC algorithm. HMAC, or Hash Message Authentication Code, is a means of verifying the authenticity of a message and that it's contents haven't been tampered with. This would be a simple extension, but this tutorial was already long as heck. You can read more about it [here](http://krytosvirus.com/text/HMAC.htm).
 
 ### Error handling
 
@@ -506,7 +508,7 @@ If you enter an incorrect password, the app crashes with an arcane message. We c
 
 ### Parameterized encryption algorithms
 
-Node's encryption algorithms are backed by whatever is available in openssl, and there are a lot of them (189 to be exact, you can see them all by entering openssl list-cipher-algorithms into your terminal). We could allow a user to choose which algorithm they'd like to use. This would require choosing the correct initialization vector and key size, too.
+Node's encryption algorithms are backed by whatever is available in openssl, and there are a lot of them (189 to be exact, you can see them all by entering `openssl list-cipher-algorithms` into your terminal). We could allow a user to choose which algorithm they'd like to use. This would require choosing the correct initialization vector and key size, too.
 
 ### Web service?
 
