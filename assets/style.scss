@@ -310,7 +310,7 @@ p > img {
   cursor: pointer;
   font-family: $helveticaNeue;
   font-weight: 300;
-  font-size: 28px;
+  font-size: 16px;
   letter-spacing: 1px;
   text-align: left;
 
@@ -1136,9 +1136,5 @@ Modules - reusable parts of our design
   }
 }
 
-
-// Settled on moving the import of syntax highlighting to the bottom of the CSS
-// ... Otherwise it really bloats up the top of the CSS file and makes it difficult to find the start
-//@import "highlights";
-@import "darcula";
+@import "oceanic";
 @import "svg-icons";
