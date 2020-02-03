@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Let's Encrypt Files With Node
+title: Encrypting Files With Node
 categories: [Javascript, Encryption]
 excerpt: "Building a CLI which will compress and encrypt a file using a password, and then decrypt and uncompress that file using that same password."
 ---
@@ -257,10 +257,14 @@ We do, however, have a means of dealing with very large files: streams! But how 
 Easy: we create our own appender stream. Node makes this simple by providing access to all the underlying streams. In brief ([from the documentation](https://nodejs.org/api/stream.html)):
 
 >There are four stream types within Node.js:
->Readable - streams from which data can be read (for example fs.createReadStream()).
->Writable - streams to which data can be written (for example fs.createWriteStream()).
->Duplex - streams that are both Readable and Writable (for example net.Socket).
->Transform - Duplex streams that can modify or transform the data as it is written and read (for example zlib.createDeflate()).
+>
+>- `Readable` - streams from which data can be read (for example `fs.createReadStream()`).
+>
+>- `Writable` - streams to which data can be written (for example `fs.createWriteStream()`).
+>
+>- `Duplex` - streams that are both `Readable` and `Writable` (for example `net.Socket`).
+>
+>- `Transform` - `Duplex` streams that can modify or transform the data as it is written and read (for example `zlib.createDeflate()`).
 
 Since we will be modifying the data, we will need to use a Transform stream.
 
@@ -411,7 +415,7 @@ Last but not least, let's create a new write stream so we can write our decrypte
 // Add an extension so it doesn't overwrite any files and
 // so we can identify it.
 const writeStream = fs.createWriteStream(filePath + '.unenc');
-Let's add that to our pipe stream.
+// Let's add that to our pipe stream.
 readStream
   .pipe(decipher)
   .pipe(unzip)
