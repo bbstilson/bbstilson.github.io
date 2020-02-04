@@ -2,7 +2,7 @@
 layout: post
 title: Encrypting Files With Node
 categories: [Javascript, Encryption]
-excerpt: "Building a CLI which will compress and encrypt a file using a password, and then decrypt and uncompress that file using that same password."
+excerpt: Building a CLI which will compress and encrypt a file using a password, and then decrypt and uncompress that file using that same password.
 ---
 
 _I received good feedback from some kind Reddit users who pointed out that there are a few implementation errors. You can read the thread [here](https://old.reddit.com/r/javascript/comments/8doo5t/lets_encrypt_files_with_node/). If you're coming from little to no knowledge on encryption, there is still a lot you can learn in this article, but don't use the code you find here in a production system. Without further ado…_
