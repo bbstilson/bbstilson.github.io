@@ -8,7 +8,8 @@ I wanted to self-host comment and analytics services using privacy-focused, OSS 
 
 Everything is hosted on a single Digital Ocean Droplet in a single Docker Compose network at the moment.
 
-For commenting, I run [Commento](https://www.commento.io/).
-For analytics, I run [Ackee](https://ackee.electerious.com/).
+For commenting, I chose [Commento](https://www.commento.io/).
+
+For analytics, I chose [Ackee](https://ackee.electerious.com/).
 
 Built on the [reverie theme](https://www.amitmerchant.com/reverie/).
