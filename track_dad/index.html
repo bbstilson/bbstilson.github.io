@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href='https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.css' rel='stylesheet' />
+  <script src='https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.js'></script>
+  <title>Track Dad</title>
+  <style>
+    #map {
+      height: 100vh;
+      width: 100vw;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+</body>
+<script>
+  class Ping {
+    constructor(lat, lon, msg, datetime, elevation) {
+      this.lat = lat
+      this.lon = lon
+      this.msg = msg
+      this.datetime = datetime
+      this.elevation = elevation
+    }
+  }
+
+  // GPS pings from oldest to newest.
+  // Add a point to the end of the list.
+  const pings = [
+    new Ping(33.796788, -116.757223, "Back on the road(again 😝) Ck in soon", "Jun 30, 2020 - 8:15 AM", 5367),
+    new Ping(33.896201, -116.684890, "Just checking in to say howdy! All is well.", "Jul 1, 2020 - 5:06 PM", 1240)
+  ];
+
+  const mostRecentLocation = pings[pings.length - 1]
+
+  mapboxgl.accessToken = 'pk.eyJ1IjoiYmJzdGlsc29uIiwiYSI6ImNrYzU4MWhyejAwdzMzMmxqbGdjd3RnejAifQ.Y5daTv6pY3gmyP4NdobrSg';
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v11', // stylesheet location
+    center: [mostRecentLocation.lon, mostRecentLocation.lat], // starting position [lng, lat]
+    zoom: 12 // starting zoom
+  });
+
+  function mkPopUp(ping, stop) {
+
+    return `<div>
+    <p>Stop ${stop}</p>
+    <p>${ping.datetime} - ${ping.elevation} ft.</p>
+    <p>${ping.msg}</p>
+    </div>`;
+  }
+
+  pings
+    .forEach((p, index) => {
+      const m = new mapboxgl.Marker()
+        .setLngLat([p.lon, p.lat])
+        .setPopup(new mapboxgl.Popup().setHTML(mkPopUp(p, index + 1)))
+        .addTo(map)
+
+      m.togglePopup()
+    })
+</script>
+
+</html>
