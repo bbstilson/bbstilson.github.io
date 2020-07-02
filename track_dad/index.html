@@ -21,11 +21,24 @@
 <script>
   class Ping {
     constructor(lat, lon, msg, datetime, elevation) {
-      this.lat = lat
-      this.lon = lon
-      this.msg = msg
-      this.datetime = datetime
-      this.elevation = elevation
+      this.lat = lat;
+      this.lon = lon;
+      this.msg = msg;
+      this.datetime = datetime;
+      this.elevation = elevation;
+    }
+
+    coords() {
+      // MapBox wants them "backwards".
+      return [this.lon, this.lat];
+    }
+
+    popup(stop) {
+      return `<div>
+      <p>Stop ${stop}</p>
+      <p>${this.datetime} - ${this.elevation} ft.</p>
+      <p>${this.msg}</p>
+      </div>`;
     }
   }
 
@@ -36,34 +49,58 @@
     new Ping(33.896201, -116.684890, "Just checking in to say howdy! All is well.", "Jul 1, 2020 - 5:06 PM", 1240)
   ];
 
-  const mostRecentLocation = pings[pings.length - 1]
+  // BUILD MAP
 
+  const mostRecentLocation = pings[pings.length - 1]
   mapboxgl.accessToken = 'pk.eyJ1IjoiYmJzdGlsc29uIiwiYSI6ImNrYzU4MWhyejAwdzMzMmxqbGdjd3RnejAifQ.Y5daTv6pY3gmyP4NdobrSg';
+
   const map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/streets-v11', // stylesheet location
-    center: [mostRecentLocation.lon, mostRecentLocation.lat], // starting position [lng, lat]
+    center: mostRecentLocation.coords(), // starting position
     zoom: 12 // starting zoom
   });
 
-  function mkPopUp(ping, stop) {
-
-    return `<div>
-    <p>Stop ${stop}</p>
-    <p>${ping.datetime} - ${ping.elevation} ft.</p>
-    <p>${ping.msg}</p>
-    </div>`;
-  }
+  // PLACE PINGS
 
   pings
     .forEach((p, index) => {
       const m = new mapboxgl.Marker()
         .setLngLat([p.lon, p.lat])
-        .setPopup(new mapboxgl.Popup().setHTML(mkPopUp(p, index + 1)))
-        .addTo(map)
+        .setPopup(new mapboxgl.Popup().setHTML(p.popup(index + 1)))
+        .addTo(map);
 
-      m.togglePopup()
-    })
+      m.togglePopup();
+    });
+
+  // DRAW LINE
+  map.on('load', function () {
+    map.addSource('route', {
+      'type': 'geojson',
+      'data': {
+        'type': 'Feature',
+        'properties': {},
+        'geometry': {
+          'type': 'LineString',
+          'coordinates': pings.map(_ => _.coords())
+        }
+      }
+    });
+    map.addLayer({
+      'id': 'route',
+      'type': 'line',
+      'source': 'route',
+      'layout': {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      'paint': {
+        'line-color': '#6499fc',
+        'line-width': 3
+      }
+    });
+  });
+
 </script>
 
 </html>
