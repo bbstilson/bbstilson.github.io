@@ -1,6 +1,6 @@
 # Provision
 
-This directory contains things used to run everything that I want to host on Digital Ocean including the NGINX reverse-proxy, the comments service, and the analytics service.
+This directory contains things used to run everything that I want to host on Digital Ocean.
 
 ## Deploying
 
