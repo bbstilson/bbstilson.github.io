@@ -4,7 +4,6 @@ title: Categories
 permalink: /categories/
 ---
 
-
 <div id="archives">
 {% for category in site.categories %}
   <div class="archive-group">
@@ -16,7 +15,7 @@ permalink: /categories/
     <a name="{{ category_name | slugize }}"></a>
     {% for post in site.categories[category_name] %}
     <article class="archive-item">
-      <h4><a href="{{ site.baseurl }}{{ post.url }}">{% if post.title and post.title != "" %}{{post.title}}{% else %}{{post.excerpt |strip_html}}{%endif%}</a></h4>
+      <h4><a href="{{ post.url }}">{% if post.title and post.title != "" %}{{post.title}}{% else %}{{post.excerpt |strip_html}}{%endif%}</a></h4>
     </article>
     {% endfor %}
   </div>
