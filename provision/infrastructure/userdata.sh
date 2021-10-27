@@ -1,4 +1,8 @@
+#! /bin/bash
+
 set -e
+
+cd /root
 
 # Download repo.
 git clone https://github.com/bbstilson/bbstilson.github.io.git
