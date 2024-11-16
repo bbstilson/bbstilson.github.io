@@ -1,5 +1,8 @@
-# Personal Site
+# bbstilson.github.io
 
-[Personal Site](https://brandonstilson.com)
+[Zola CLI usage](https://www.getzola.org/documentation/getting-started/cli-usage/)
 
-Built on the [reverie theme](https://www.amitmerchant.com/reverie/).
+```bash
+zola serve
+zola build
+```

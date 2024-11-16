@@ -1,0 +1,19 @@
+{% extends "base.html" %} {% block main_content %}
+
+<div class="game-container">
+  <div id="dodgygame-root"></div>
+</div>
+<script src="/dodgygame.js"></script>
+<style>
+  .game-container {
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+  }
+  #dodgygame-root {
+    height: 500px;
+    width: 500px;
+    /* background-color: white; */
+  }
+</style>
+{% endblock main_content %}
