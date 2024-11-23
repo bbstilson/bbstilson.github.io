@@ -6,6 +6,10 @@ weight = 1
 
 # 2024
 
+- Rush (2013)
+  - Pretty good biopic about F1 drivers in the 70s.
+- Palm Springs (2020)
+  - Hilarious Groundhog Day style time loop movie.
 - Predestination (2014)
   - Really solid time travel movie.
 - Constantine (2001)
