@@ -7,6 +7,8 @@ Just the highlights. Everything is "scrobbled" on [last.fm](https://www.last.fm/
 
 # 2024
 
+- Kendrick Lamar - GNX (2024)
+  - MUSTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARD
 - Charli xcx - BRAT (2024)
   - #pop #hyperpop
 - Anatole Muster - Wonderful now (2024)

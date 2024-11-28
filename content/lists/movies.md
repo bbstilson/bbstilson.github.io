@@ -6,6 +6,8 @@ weight = 1
 
 # 2024
 
+- Training Day (2001)
+  - Great movie. Tense AF. Denzel and Hawke are amazing.
 - Rush (2013)
   - Pretty good biopic about F1 drivers in the 70s.
 - Palm Springs (2020)
