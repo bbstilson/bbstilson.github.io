@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<html class="dark light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    
+
+    
+    
+    
+    <title>
+         Encrypting Files With Node
+        
+    </title>
+
+        
+            <meta property="og:title" content="Encrypting Files With Node" />
+        
+     
+
+     
+         
+     
+
+     
+         
+    
+
+    
+    
+
+    
+    
+        <link href=https://brandonstilson.com/fonts.css rel="stylesheet" />
+    
+
+    
+    
+
+    
+    
+        <script src=https://brandonstilson.com/js/codeblock.js></script>
+    
+
+    
+    
+    
+    
+    
+
+    
+
+    
+    <link rel="alternate" type="application/atom+xml" title="" href="https://brandonstilson.com/atom.xml">
+
+
+    
+    
+        <link rel="stylesheet" type="text/css" href=https://brandonstilson.com/theme/light.css />
+        <link rel="stylesheet" type="text/css" href="https://brandonstilson.com/theme/dark.css" media="(prefers-color-scheme: dark)" />
+    
+
+    <!-- Set the correct theme in the script -->
+    <script src=https://brandonstilson.com/js/themetoggle.js></script>
+    
+        <script>
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                setTheme("dark");
+            } else {
+                setTheme("light");
+            }
+        </script>
+    
+
+    <link rel="stylesheet" type="text/css" media="screen" href=https://brandonstilson.com/main.css />
+
+    
+</head>
+
+
+<body>
+    <div class="content">
+        <header>
+    <div class="main">
+        <a href=https:&#x2F;&#x2F;brandonstilson.com></a>
+
+        <div class="socials">
+            
+            <a rel="me" href="https:&#x2F;&#x2F;github.com&#x2F;bbstilson&#x2F;" class="social">
+                <img alt=github src=https://brandonstilson.com/social_icons/github.svg>
+            </a>
+            
+        </div>
+    </div>
+
+    <nav>
+        
+        <a href=https://brandonstilson.com/posts style="margin-left: 0.5em">&#x2F;posts</a>
+        
+        <a href=https://brandonstilson.com/lists style="margin-left: 0.5em">&#x2F;lists</a>
+        
+        <a href=https://brandonstilson.com/web style="margin-left: 0.5em">&#x2F;web</a>
+        
+
+        
+    </nav>
+</header>
+
+
+        
+        
+    
+<main>
+    <article>
+        <div class="title">
+            
+            
+    <div class="page-header">
+        Encrypting Files With Node<span class="primary-color" style="font-size: 1.6em">.</span>
+    </div>
+
+
+                <div class="meta">
+                    
+                        Posted on <time>2018-04-18</time>
+                    
+
+                    
+
+                    
+
+                    
+                    
+
+                    
+                    
+
+                    
+
+                </div>
+        </div>
+
+        
+
+        
+        
+
+        <section class="body">
+            <p><em>I received good feedback from some kind Reddit users who pointed out that there are a few implementation errors. You can read the thread <a href="https://old.reddit.com/r/javascript/comments/8doo5t/lets_encrypt_files_with_node/">here</a>. If you're coming from little to no knowledge on encryption, there is still a lot you can learn in this article, but don't use the code you find here in a production system. Without further ado…</em></p>
+<hr />
+<p>We're going to build a CLI program which will allow us to compress and encrypt a file using a password, and then decrypt and uncompress that file using that same password. We'll be doing it entirely in Node with no external dependencies.</p>
+<p>Overall, the plan is to:</p>
+<ol>
+<li>Read some plaintext.</li>
+<li>Compress it.</li>
+<li>Encrypt it.</li>
+<li>Append data used in the encryption process (which is needed for decryption later).</li>
+<li>Write the cipher text to a file.</li>
+</ol>
+<p>Then, we'll need to reverse those steps:</p>
+<ol>
+<li>Read some cipher text.</li>
+<li>Pull the encryption data.</li>
+<li>Decrypt it.</li>
+<li>Decompress it.</li>
+<li>Write the plaintext to a file.</li>
+</ol>
+<p>What we'll be learning</p>
+<ul>
+<li>How to work with Node streams.</li>
+<li>How to write custom streams.</li>
+<li>How to use some of the crypto functions.</li>
+<li>A little bit about AES encryption.</li>
+</ul>
+<p>Sound good? Let's get started.</p>
+<p><em><strong>If you just want to see the source code, it's on Github <a href="https://github.com/bbstilson/node-encryption">here</a>.</strong></em></p>
+<h2 id="part-0-preparing-our-project"><a class="zola-anchor" href="#part-0-preparing-our-project" aria-label="Anchor link for: part-0-preparing-our-project">Part 0: Preparing our project</a></h2>
+<p>First, let's create a directory, and, in it, create two files, <code>index.js</code> and <code>file.txt</code>. Our directory should look like this:</p>
+<pre data-lang="plaintext" style="background-color:#2b303b;color:#c0c5ce;" class="language-plaintext "><code class="language-plaintext" data-lang="plaintext"><span>├── index.js
+</span><span>└── file.txt
+</span></code></pre>
+<p>In <code>file.txt</code>, let's put a little bit of text (I used a paragraph from <a href="https://baconipsum.com/">baconipsum</a>):</p>
+<blockquote>
+<p>Spicy jalapeno bacon ipsum dolor amet fugiat fatback ut flank dolor in ea, aute buffalo duis. T-bone occaecat sunt nisi commodo pig. Beef ullamco prosciutto irure cow dolore. Reprehenderit chicken ut, pork chop venison consectetur quis in. Ut pig duis aliqua.</p>
+</blockquote>
+<h2 id="part-1-node-streams-a-quick-primer"><a class="zola-anchor" href="#part-1-node-streams-a-quick-primer" aria-label="Anchor link for: part-1-node-streams-a-quick-primer">Part 1: Node Streams - A Quick Primer</a></h2>
+<h3 id="reading-files"><a class="zola-anchor" href="#reading-files" aria-label="Anchor link for: reading-files">Reading Files</a></h3>
+<p>In Node, your application code runs in a single thread. The stdlib provides access to APIs that run I/O processes in separate, system managed threads and invoke your application level callbacks as appropriate.</p>
+<p>For example, if you want to read a file, you can do it synchronously like this:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">fs </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">fs</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">fileContents </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">readFileSync</span><span>(&#39;</span><span style="color:#a3be8c;">./file.txt</span><span>&#39;);
+</span><span style="color:#ebcb8b;">console</span><span>.</span><span style="color:#96b5b4;">log</span><span>(</span><span style="color:#bf616a;">fileContents</span><span>);
+</span></code></pre>
+<p>That totally works, but it's blocking and is loading everything into memory, which is not ideal. Imagine if file.txt was several gigabytes! Streams, on the other hand, are a powerful tool that allows us to write programs which deal with small amounts of data in an asynchronous manner. This keeps our programs much more memory efficient and available to process other requests.</p>
+<p>Let's rewrite this using a read stream:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">fs </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">fs</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">readStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createReadStream</span><span>(&#39;</span><span style="color:#a3be8c;">./file.txt</span><span>&#39;);
+</span><span style="color:#bf616a;">readStream</span><span>.</span><span style="color:#8fa1b3;">on</span><span>(&#39;</span><span style="color:#a3be8c;">data</span><span>&#39;, (</span><span style="color:#bf616a;">chunk</span><span>) </span><span style="color:#b48ead;">=&gt;</span><span>{
+</span><span>  </span><span style="color:#ebcb8b;">console</span><span>.</span><span style="color:#96b5b4;">log</span><span>(</span><span style="color:#bf616a;">chunk</span><span>.</span><span style="color:#96b5b4;">toString</span><span>(&#39;</span><span style="color:#a3be8c;">utf8</span><span>&#39;));
+</span><span>});
+</span></code></pre>
+<p>What this is doing is pretty cool. <code>createReadStream</code> is asynchronously reading a file bit by bit without blocking the rest of the code execution. Currently, though, it's a bit clunky, and we can use a cool feature of streams: piping.</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">fs </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">fs</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">readStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createReadStream</span><span>(&#39;</span><span style="color:#a3be8c;">./file.txt</span><span>&#39;);
+</span><span style="color:#bf616a;">readStream</span><span>.</span><span style="color:#8fa1b3;">pipe</span><span>(process.stdout);
+</span></code></pre>
+<p>This accomplishes the exact same thing as the above code in fewer lines. In Node (unless you change it), <code>console.log</code> writes to <code>process.stdout</code>, and because <code>process.stdout</code> is a stream, we can tell it to print out each chunk of data as it receives it from the read stream.</p>
+<h3 id="writing-files"><a class="zola-anchor" href="#writing-files" aria-label="Anchor link for: writing-files">Writing Files</a></h3>
+<p>Let's expand this code to create a new file. For that, we need a new method: <code>createWriteStream</code>.</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">fs </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">fs</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">readStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createReadStream</span><span>(&#39;</span><span style="color:#a3be8c;">./file.txt</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">writeStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createWriteStream</span><span>(&#39;</span><span style="color:#a3be8c;">./newfile.txt</span><span>&#39;);
+</span><span style="color:#bf616a;">readStream</span><span>.</span><span style="color:#8fa1b3;">on</span><span>(&#39;</span><span style="color:#a3be8c;">data</span><span>&#39;, (</span><span style="color:#bf616a;">chunk</span><span>) </span><span style="color:#b48ead;">=&gt; </span><span>{
+</span><span>  </span><span style="color:#bf616a;">writeStream</span><span>.</span><span style="color:#96b5b4;">write</span><span>(</span><span style="color:#bf616a;">chunk</span><span>);
+</span><span>});
+</span></code></pre>
+<p>Here, we're calling the <code>write</code> method on the write stream with the chunk of data we read from the read stream. But again, this is kind of clunky. Rather than invoking <code>write</code>, let's do what we did before and pipe the read stream directly to the write stream!</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">fs </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">fs</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">readStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createReadStream</span><span>(&#39;</span><span style="color:#a3be8c;">./file.txt</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">writeStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createWriteStream</span><span>(&#39;</span><span style="color:#a3be8c;">./newfile.txt</span><span>&#39;);
+</span><span style="color:#bf616a;">readStream</span><span>.</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">writeStream</span><span>);
+</span></code></pre>
+<p>Much better.</p>
+<p>Piping, besides being more terse, handles both writing to the stream as well as closing, or <code>end</code>ing, the stream, which triggers an "on finished" event that can be listened to and acted in response to.</p>
+<p>So, now we have a pretty useless program which creates a new file with the exact same data as some other file, but we're headed in the right direction.</p>
+<h3 id="compression"><a class="zola-anchor" href="#compression" aria-label="Anchor link for: compression">Compression</a></h3>
+<p>Rather than simply writing the same contents to a new file, let's compress that file as we write it. For that, we'll need another Node module: <a href="https://nodejs.org/api/zlib.html"><code>zlib</code></a>. <code>zlib</code> has a couple compression and decompression schemes, but the one we're going to use is gzip, which is a standard compression algorithm that compresses content really well.</p>
+<p>To create a gzip stream in Node, we need to require the <code>zlib</code> module, then create a gzip stream:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">fs </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">fs</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">zlib </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">zlib</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">readStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createReadStream</span><span>(&#39;</span><span style="color:#a3be8c;">./file.txt</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">gzipStream </span><span>= </span><span style="color:#bf616a;">zlib</span><span>.</span><span style="color:#8fa1b3;">createGzip</span><span>();
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">writeStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createWriteStream</span><span>(&#39;</span><span style="color:#a3be8c;">./newfile.txt</span><span>&#39;);
+</span><span style="color:#bf616a;">readStream
+</span><span>  .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">gzipStream</span><span>)
+</span><span>  .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">writeStream</span><span>);
+</span></code></pre>
+<p>That's it! We've written a program that is basically saying, "Read a chunk of data, pass that chunk to the gzip stream to be compressed, then write that compressed chunk to a new file. Do that until there are no more chunks to read from the original file."</p>
+<p>Let's checkout <code>newfile.txt</code>:</p>
+<pre data-lang="plaintext" style="background-color:#2b303b;color:#c0c5ce;" class="language-plaintext "><code class="language-plaintext" data-lang="plaintext"><span>1f8b 0800 0000 0000 0013 b590 d151 0331
+</span><span>0c44 ffa9 620b 0857 0425 1028 40a7 d325
+</span><span>e26c cbb1 2518 ba47 09b4 c097 343b 3bda
+</span><span>b73a 77e5 6f7c 50a1 2ecd b012 5b83 f619
+</span><span>159b 151b a02a 8e3d 2e4a 39c8 d370 2072
+</span><span>2dd4 8e3f 8b36 089d 40e1 8235 f69d 8a61
+</span><span>0b9d 0bde 9e57 6b02 6326 e13c 30a3 399a
+</span><span>4e05 5bad b619 ba5e 16bc 88ec 8852 a872
+</span><span>2ac3 266b b81b 74c4 90b4 7efd 06c9 8257
+</span><span>e943 aed2 3619 eae0 abf2 212d 794e e836
+</span><span>8e14 ace3 5332 215b 6493 29ec e231 704b
+</span><span>9ce4 5cf0 eef7 c807 1ea8 e82d 68c1 f93f
+</span><span>7ff0 f403 304e c86c 6201 0000
+</span></code></pre>
+<p>Cool, binary data. Not super readable, but it is much smaller (~42% smaller)!</p>
+<pre data-lang="plaintext" style="background-color:#2b303b;color:#c0c5ce;" class="language-plaintext "><code class="language-plaintext" data-lang="plaintext"><span>&gt; ls -lh
+</span><span>354B file.txt
+</span><span>204B newfile.txt
+</span></code></pre>
+<p>The next step is to encrypt this bad boy.</p>
+<h2 id="part-2-encryption"><a class="zola-anchor" href="#part-2-encryption" aria-label="Anchor link for: part-2-encryption">Part 2: Encryption</a></h2>
+<p>The encryption algorithm we're going to be using is AES - specifically AES-256. <a href="https://en.wikipedia.org/wiki/Advanced_Encryption_Standard">AES</a> is a symmetric-key algorithm, meaning the same key is used for both encrypting and decrypting the data. It is one of the most popular and widely used encryption algorithms. There are three variants (block sizes) of AES: 128, 192, and 256. We'll be using the 256 variant of AES as it is the most secure. This is a great comic about AES if you want to know more: <a href="http://www.moserware.com/2009/09/stick-figure-guide-to-advanced.html">A Stick Figure Guide to the Advanced Encryption Standard</a>.</p>
+<p>Node has a built-in <a href="https://nodejs.org/api/crypto.html">crypto</a> module, which provides several cryptographic tools which largely run OpenSSL functions under-the-hood. There are tons of really cool things in this module, but for our purposes, we're going to be creating a cipher.</p>
+<p>There are two functions for creating ciphers: <code>createCipher</code> and <code>createCipheriv</code>. Before we understand which one we should choose, let's quickly learn about initialization vectors. An initialization vector, is a cryptographically secure pseudo-random number which ensure that, given the same plaintext and password (or key), the same cipher text is not produced [1].</p>
+<p><code>createCipher</code> is less secure than <code>createCipheriv</code> as it auto-generates an initialization vector based on the password that was used to create the cipher, and, due to the internal mechanics of how that initialization vector is generated, it is vulnerable to certain types of attack. (You can read more details on the <code>createCipher</code> <a href="https://nodejs.org/api/crypto.html#crypto_crypto_createcipher_algorithm_password_options">docs</a>). Given that, we're going to use <code>createCipheriv</code>.</p>
+<p>Looking at the documentation for <code>createCipheriv</code>, we need to provide three things:</p>
+<ol>
+<li>The algorithm. (We chose this already: AES-256).</li>
+<li>A cipher key.</li>
+<li>An initialization vector.</li>
+</ol>
+<p>How do we choose a key and initialization vector?</p>
+<h3 id="generating-a-cipher-key"><a class="zola-anchor" href="#generating-a-cipher-key" aria-label="Anchor link for: generating-a-cipher-key">Generating a cipher key</a></h3>
+<p>The key needs to be the size of the block (in bits). So, given that we're using AES-256, we need a 256 bit, or 32 byte, key. We can do this in a few ways. The easiest one would be to ask the crypto module to give you 32 random bytes:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">KEY </span><span>= </span><span style="color:#bf616a;">crypto</span><span>.</span><span style="color:#8fa1b3;">randomBytes</span><span>(</span><span style="color:#d08770;">32</span><span>);
+</span><span style="color:#bf616a;">KEY </span><span style="color:#65737e;">// &lt;Buffer 60 6f 9b 16 52 72 6c 32 54 67 17 18 1b db e7 0b ee 64 80 ee d8 f4 98 f8 d2 58 b8 23 82 06 cd 15&gt;
+</span><span style="color:#bf616a;">KEY</span><span>.length </span><span style="color:#65737e;">// 32
+</span></code></pre>
+<p>This would allow us to create a cipher for AES-256, but this key is effectively going to be our password for a file, so randomly generating one isn't very useful as no one will be able to remember it. What we could do instead is create a hash of the password using another crypto method: <code>createHash</code>.</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">hash </span><span>= </span><span style="color:#bf616a;">crypto</span><span>.</span><span style="color:#8fa1b3;">createHash</span><span>(&#39;</span><span style="color:#a3be8c;">sha256</span><span>&#39;);
+</span><span style="color:#bf616a;">hash</span><span>.</span><span style="color:#8fa1b3;">update</span><span>(&#39;</span><span style="color:#a3be8c;">mySup3rC00lP4ssWord</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">KEY </span><span>= </span><span style="color:#bf616a;">hash</span><span>.</span><span style="color:#8fa1b3;">digest</span><span>();
+</span><span style="color:#bf616a;">KEY </span><span style="color:#65737e;">// &lt;Buffer ee b6 af 01 b3 1f 1f 01 a6 2f 14 92 2c 5c 80 54 ad 6d 51 cb 99 8c 28 f0 56 a7 ec 08 61 a6 aa ef&gt;
+</span><span style="color:#bf616a;">KEY</span><span>.length </span><span style="color:#65737e;">// 32
+</span></code></pre>
+<p>A cryptographically secure hash function has three factors which are useful for generating a key for our cipher:</p>
+<ol>
+<li>It is one-way, meaning it's very difficult, given a hash, to reverse it and figure out what went in.</li>
+<li>It produces a fixed output length. For sha256, it will always produce a 32 byte buffer, which just happens to be the size we needed for our AES-256 cipher.</li>
+<li>It's deterministic. That is, the hash function will always produce the same hash for the same plaintext.</li>
+</ol>
+<p>Let's wrap that functionality in a helper function:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">function </span><span style="color:#8fa1b3;">getCipherKey</span><span>(</span><span style="color:#bf616a;">password</span><span>) {
+</span><span>  </span><span style="color:#b48ead;">return </span><span style="color:#bf616a;">crypto</span><span>.</span><span style="color:#8fa1b3;">createHash</span><span>(&#39;</span><span style="color:#a3be8c;">sha256</span><span>&#39;).</span><span style="color:#8fa1b3;">update</span><span>(</span><span style="color:#bf616a;">password</span><span>).</span><span style="color:#8fa1b3;">digest</span><span>();
+</span><span>}
+</span></code></pre>
+<p>This will allow us to easily get a cipher key for any password.</p>
+<p>You might be asking yourself, "If the same hash is generated for a password, isn't out encryption weak?". That's where the initialization vector comes in.</p>
+<h3 id="generating-an-initialization-vector"><a class="zola-anchor" href="#generating-an-initialization-vector" aria-label="Anchor link for: generating-an-initialization-vector">Generating an initialization vector</a></h3>
+<p>The rules for an initialization vector are a bit different. The most important aspect of an initialization vector is that it is never reused. We can ensure this will be the case by generating a random initialization vector for each file we encrypt. We already saw how to do this above when we generated a key:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">initVect </span><span>= </span><span style="color:#bf616a;">crypto</span><span>.</span><span style="color:#8fa1b3;">randomBytes</span><span>(</span><span style="color:#d08770;">16</span><span>);
+</span></code></pre>
+<p>So long as the initialization vector is generated using a cryptographically secure random (or pseudo-random) number generator, getting the same initialization vector is extremely unlikely.
+As was mentioned, AES is a symmetric-key algorithm. This means that we need to know about all the input into our cipher in order to decrypt the ciphertext. The user keeps track of their password, and we're using a deterministic hash function to generate our key.</p>
+<p>But what about the initialization vector? That was randomly generated, so no one knows it. As it turns out, the initialization vector does not need to be kept secret; the key protects the encrypted data, whereas the use of a random initialization vector ensures that information is not leaked by the cipher text itself. As such, it should not be encrypted with the plaintext and can simply be sent "in the clear". Typically, this is done by appending the initialization vector to the front of the cipher text.</p>
+<p>If we were dealing with some strings, we could just do something like:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">function </span><span style="color:#8fa1b3;">encrypt</span><span>(</span><span style="color:#bf616a;">text</span><span>, </span><span style="color:#bf616a;">password</span><span>) {
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">initVect </span><span>= </span><span style="color:#bf616a;">crypto</span><span>.</span><span style="color:#8fa1b3;">randomBytes</span><span>(</span><span style="color:#d08770;">16</span><span>);
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">key </span><span>= </span><span style="color:#8fa1b3;">getCipherKey</span><span>(</span><span style="color:#bf616a;">password</span><span>);
+</span><span>
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">cipher </span><span>= </span><span style="color:#8fa1b3;">createCipheriv</span><span>(&#39;</span><span style="color:#a3be8c;">aes256</span><span>&#39;, </span><span style="color:#bf616a;">key</span><span>, </span><span style="color:#bf616a;">initVect</span><span>);
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">cipherText </span><span>= </span><span style="color:#bf616a;">cipher</span><span>.</span><span style="color:#8fa1b3;">update</span><span>(</span><span style="color:#bf616a;">text</span><span>).</span><span style="color:#8fa1b3;">digest</span><span>();
+</span><span>
+</span><span>  </span><span style="color:#b48ead;">return </span><span style="color:#bf616a;">initVect </span><span>+ </span><span style="color:#bf616a;">ciphertext</span><span>;
+</span><span>}
+</span><span>
+</span><span style="color:#8fa1b3;">encrypt</span><span>(&#39;</span><span style="color:#a3be8c;">hello</span><span>&#39;, &#39;</span><span style="color:#a3be8c;">mygr8password</span><span>&#39;);
+</span></code></pre>
+<p>That's basically what we want, but this won't work if we want to encrypt something large like a movie or very large text document.</p>
+<p>We do, however, have a means of dealing with very large files: streams! But how do we append something to a stream?</p>
+<h3 id="keeping-track-of-the-cipher-input"><a class="zola-anchor" href="#keeping-track-of-the-cipher-input" aria-label="Anchor link for: keeping-track-of-the-cipher-input">Keeping track of the cipher input</a></h3>
+<p>Easy: we create our own appender stream. Node makes this simple by providing access to all the underlying streams. In brief (<a href="https://nodejs.org/api/stream.html">from the documentation</a>):</p>
+<blockquote>
+<p>There are four stream types within Node.js:</p>
+<ul>
+<li>
+<p><code>Readable</code> - streams from which data can be read (for example <code>fs.createReadStream()</code>).</p>
+</li>
+<li>
+<p><code>Writable</code> - streams to which data can be written (for example <code>fs.createWriteStream()</code>).</p>
+</li>
+<li>
+<p><code>Duplex</code> - streams that are both <code>Readable</code> and <code>Writable</code> (for example <code>net.Socket</code>).</p>
+</li>
+<li>
+<p><code>Transform</code> - <code>Duplex</code> streams that can modify or transform the data as it is written and read (for example <code>zlib.createDeflate()</code>).</p>
+</li>
+</ul>
+</blockquote>
+<p>Since we will be modifying the data, we will need to use a Transform stream.</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span>{ </span><span style="color:#bf616a;">Transform </span><span>} = </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">stream</span><span>&#39;);
+</span><span>
+</span><span style="color:#b48ead;">class </span><span style="color:#ebcb8b;">AppendInitVect </span><span style="color:#b48ead;">extends </span><span style="color:#a3be8c;">Transform </span><span style="color:#eff1f5;">{
+</span><span style="color:#eff1f5;">  </span><span style="color:#b48ead;">constructor</span><span>(</span><span style="color:#bf616a;">initVect</span><span style="color:#eff1f5;">, </span><span style="color:#bf616a;">opts</span><span>) </span><span style="color:#eff1f5;">{
+</span><span style="color:#eff1f5;">    </span><span style="color:#bf616a;">super</span><span style="color:#eff1f5;">(</span><span style="color:#bf616a;">opts</span><span style="color:#eff1f5;">);
+</span><span style="color:#eff1f5;">    </span><span style="color:#bf616a;">this</span><span style="color:#eff1f5;">.</span><span style="color:#bf616a;">initVect </span><span>= </span><span style="color:#bf616a;">initVect</span><span style="color:#eff1f5;">;
+</span><span style="color:#eff1f5;">    </span><span style="color:#bf616a;">this</span><span style="color:#eff1f5;">.</span><span style="color:#bf616a;">appended </span><span>= </span><span style="color:#d08770;">false</span><span style="color:#eff1f5;">;
+</span><span style="color:#eff1f5;">  }
+</span><span style="color:#eff1f5;">
+</span><span style="color:#eff1f5;">  </span><span style="color:#8fa1b3;">_transform</span><span>(</span><span style="color:#bf616a;">chunk</span><span style="color:#eff1f5;">, </span><span style="color:#bf616a;">encoding</span><span style="color:#eff1f5;">, </span><span style="color:#bf616a;">cb</span><span>) </span><span style="color:#eff1f5;">{
+</span><span style="color:#eff1f5;">    </span><span style="color:#b48ead;">if </span><span style="color:#eff1f5;">(</span><span>!</span><span style="color:#bf616a;">this</span><span style="color:#eff1f5;">.</span><span style="color:#bf616a;">appended</span><span style="color:#eff1f5;">) {
+</span><span style="color:#eff1f5;">      </span><span style="color:#bf616a;">this</span><span style="color:#eff1f5;">.</span><span style="color:#96b5b4;">push</span><span style="color:#eff1f5;">(</span><span style="color:#bf616a;">this</span><span style="color:#eff1f5;">.</span><span style="color:#bf616a;">initVect</span><span style="color:#eff1f5;">);
+</span><span style="color:#eff1f5;">      </span><span style="color:#bf616a;">this</span><span style="color:#eff1f5;">.</span><span style="color:#bf616a;">appended </span><span>= </span><span style="color:#d08770;">true</span><span style="color:#eff1f5;">;
+</span><span style="color:#eff1f5;">    }
+</span><span style="color:#eff1f5;">    </span><span style="color:#bf616a;">this</span><span style="color:#eff1f5;">.</span><span style="color:#96b5b4;">push</span><span style="color:#eff1f5;">(</span><span style="color:#bf616a;">chunk</span><span style="color:#eff1f5;">);
+</span><span style="color:#eff1f5;">    </span><span style="color:#8fa1b3;">cb</span><span style="color:#eff1f5;">();
+</span><span style="color:#eff1f5;">  }
+</span><span style="color:#eff1f5;">}
+</span><span>
+</span><span>module.exports = </span><span style="color:#bf616a;">AppendInitVect</span><span>;
+</span></code></pre>
+<p>This class takes the initialization vector as a constructor argument, and pushes it to the stream before the first chunk of data is pushed. Then, after pushing the <code>initVect</code>, we flip a flag and let the rest of the data stream through unmodified.</p>
+<h3 id="assembling-an-encryption-function"><a class="zola-anchor" href="#assembling-an-encryption-function" aria-label="Anchor link for: assembling-an-encryption-function">Assembling an encryption function</a></h3>
+<p>Let's pipe all these together and wrap it in a function:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">crypto </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">crypto</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">fs </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">fs</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">path </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">path</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">zlib </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">zlib</span><span>&#39;);
+</span><span>
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">AppendInitVect </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">./appendInitVect</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">getCipherKey </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">./getCipherKey</span><span>&#39;);
+</span><span>
+</span><span style="color:#b48ead;">function </span><span style="color:#8fa1b3;">encrypt</span><span>({ </span><span style="color:#bf616a;">file</span><span>, </span><span style="color:#bf616a;">password </span><span>}) {
+</span><span>  </span><span style="color:#65737e;">// Generate a secure, pseudo random initialization vector.
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">initVect </span><span>= </span><span style="color:#bf616a;">crypto</span><span>.</span><span style="color:#8fa1b3;">randomBytes</span><span>(</span><span style="color:#d08770;">16</span><span>);
+</span><span>  
+</span><span>  </span><span style="color:#65737e;">// Generate a cipher key from the password.
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">CIPHER_KEY </span><span>= </span><span style="color:#8fa1b3;">getCipherKey</span><span>(</span><span style="color:#bf616a;">password</span><span>);
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">readStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createReadStream</span><span>(</span><span style="color:#bf616a;">file</span><span>);
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">gzip </span><span>= </span><span style="color:#bf616a;">zlib</span><span>.</span><span style="color:#8fa1b3;">createGzip</span><span>();
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">cipher </span><span>= </span><span style="color:#bf616a;">crypto</span><span>.</span><span style="color:#8fa1b3;">createCipheriv</span><span>(&#39;</span><span style="color:#a3be8c;">aes256</span><span>&#39;, </span><span style="color:#bf616a;">CIPHER_KEY</span><span>, </span><span style="color:#bf616a;">initVect</span><span>);
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">appendInitVect </span><span>= new AppendInitVect(</span><span style="color:#bf616a;">initVect</span><span>);
+</span><span>  </span><span style="color:#65737e;">// Create a write stream with a different file extension.
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">writeStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createWriteStream</span><span>(</span><span style="color:#bf616a;">path</span><span>.</span><span style="color:#96b5b4;">join</span><span>(</span><span style="color:#bf616a;">file </span><span>+ &quot;</span><span style="color:#a3be8c;">.enc</span><span>&quot;));
+</span><span>  
+</span><span>  </span><span style="color:#bf616a;">readStream
+</span><span>    .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">gzip</span><span>)
+</span><span>    .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">cipher</span><span>)
+</span><span>    .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">appendInitVect</span><span>)
+</span><span>    .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">writeStream</span><span>);
+</span><span>}
+</span></code></pre>
+<p>We can run this function by passing it a path to the file you want to encrypt and a password:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#8fa1b3;">encrypt</span><span>({ file: &#39;</span><span style="color:#a3be8c;">./file.txt</span><span>&#39;, password: &#39;</span><span style="color:#a3be8c;">dogzrgr8</span><span>&#39; });
+</span></code></pre>
+<h2 id="part-3-decryption"><a class="zola-anchor" href="#part-3-decryption" aria-label="Anchor link for: part-3-decryption">Part 3: Decryption</a></h2>
+<p>To decrypt a file, we need to do everything we did to encrypt it but in reverse. We'll need to:</p>
+<ol>
+<li>Read the file.</li>
+<li>Get the initialization vector.</li>
+<li>Decrypt the cipher text</li>
+<li>Uncompress it.</li>
+<li>Write the plaintext to a file.</li>
+</ol>
+<h3 id="reading-the-cipher-text"><a class="zola-anchor" href="#reading-the-cipher-text" aria-label="Anchor link for: reading-the-cipher-text">Reading the cipher text</a></h3>
+<p>We've seen how easy it is to read data from a file using a write stream. However, there's a slight twist to what we need to do here. Our cipher text file isn't just the encrypted plaintext; it also has the initialization vector prepended to the file. We need to separate the IV from the rest of the cipher text. Given that a stream deals with chunks of a file, how can we know the first chunk of data contains our initialization vector and only our initialization vector? Similarly, how do we know that the second chunk is the start of our cipher text?</p>
+<p>According to the <code>readStream</code> <a href="https://nodejs.org/api/fs.html#fs_fs_createreadstream_path_options">docs</a>, <code>createReadStream</code> takes two arguments: path and options. Via the options argument, we can tell the stream where to <code>start</code> and <code>end</code>. So, rather than using one stream, we can use two streams: one for the <code>initVect</code> and the other for the cipher text.</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#65737e;">// First, create a stream which will read the init vect from the file.
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">readIv </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createReadStream</span><span>(</span><span style="color:#bf616a;">filePath</span><span>, { end: </span><span style="color:#d08770;">15 </span><span>});
+</span><span style="color:#65737e;">// Then, wait to get the initVect.
+</span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">initVect</span><span>;
+</span><span style="color:#bf616a;">readIv</span><span>.</span><span style="color:#8fa1b3;">on</span><span>(&#39;</span><span style="color:#a3be8c;">data</span><span>&#39;, (</span><span style="color:#bf616a;">chunk</span><span>) </span><span style="color:#b48ead;">=&gt; </span><span>{
+</span><span>  </span><span style="color:#bf616a;">initVect </span><span>= </span><span style="color:#bf616a;">chunk</span><span>;
+</span><span>});
+</span><span style="color:#65737e;">// Once we&#39;ve got the initialization vector, we can decrypt
+</span><span style="color:#65737e;">// the file.
+</span><span style="color:#bf616a;">readIv</span><span>.</span><span style="color:#8fa1b3;">on</span><span>(&#39;</span><span style="color:#a3be8c;">close</span><span>&#39;, () </span><span style="color:#b48ead;">=&gt; </span><span>{
+</span><span>  </span><span style="color:#65737e;">// start decrypting the cipher text…
+</span><span>});
+</span></code></pre>
+<p>Since we know that the initialization vector for AES-256 is 16 bytes, we can tell the stream to only read the first 16 bytes. Once we've captured the initialization vector, and the read stream has closed, we can start decrypting the cipher text.</p>
+<p>Similar to what we did to only read the initialization vector, we need to create a stream which will start reading after the initialization vector:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#65737e;">// inside the &#39;close&#39; callback for the read initVect stream.
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">readStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createReadStream</span><span>(</span><span style="color:#bf616a;">filePath</span><span>, { start: </span><span style="color:#d08770;">16 </span><span>});
+</span></code></pre>
+<p>Now that we have access to the initialization vector, the password, and the cipher text, we're ready to start decrypting our file.</p>
+<h3 id="deciphering"><a class="zola-anchor" href="#deciphering" aria-label="Anchor link for: deciphering">Deciphering</a></h3>
+<p>Similar to how we encrypted the file using <code>createCipheriv</code>, we're going to use a new method: <code>createDecipheriv</code>. It takes the same arguments as <code>createCipheriv</code>:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">cipherKey </span><span>= </span><span style="color:#8fa1b3;">getCipherKey</span><span>(</span><span style="color:#bf616a;">password</span><span>);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">decipher </span><span>= </span><span style="color:#bf616a;">crypto</span><span>.</span><span style="color:#8fa1b3;">createDecipheriv</span><span>(&#39;</span><span style="color:#a3be8c;">aes256</span><span>&#39;, </span><span style="color:#bf616a;">cipherKey</span><span>, </span><span style="color:#bf616a;">initVect</span><span>);
+</span></code></pre>
+<p>Let's pipe this onto our read stream:</p>
+<pre data-lang="plaintext" style="background-color:#2b303b;color:#c0c5ce;" class="language-plaintext "><code class="language-plaintext" data-lang="plaintext"><span>readStream
+</span><span>  .pipe(decipher);
+</span></code></pre>
+<h3 id="decompression"><a class="zola-anchor" href="#decompression" aria-label="Anchor link for: decompression">Decompression</a></h3>
+<p>Next step is decompressing the file. In the same way that we created a gzip stream using the <code>createGzip</code> method, we'll be using its inverse: <code>createUnzip</code>.</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">unzip </span><span>= </span><span style="color:#bf616a;">zlib</span><span>.</span><span style="color:#8fa1b3;">createUnzip</span><span>();
+</span></code></pre>
+<p>Let's also add that to our pipe stream:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#bf616a;">readStream
+</span><span>  .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">decipher</span><span>)
+</span><span>  .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">unzip</span><span>);
+</span></code></pre>
+<h3 id="writing-again"><a class="zola-anchor" href="#writing-again" aria-label="Anchor link for: writing-again">Writing again</a></h3>
+<p>Last but not least, let's create a new write stream so we can write our decrypted, decompressed file.</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#65737e;">// Add an extension so it doesn&#39;t overwrite any files and
+</span><span style="color:#65737e;">// so we can identify it.
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">writeStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createWriteStream</span><span>(</span><span style="color:#bf616a;">filePath </span><span>+ &#39;</span><span style="color:#a3be8c;">.unenc</span><span>&#39;);
+</span><span style="color:#65737e;">// Let&#39;s add that to our pipe stream.
+</span><span style="color:#bf616a;">readStream
+</span><span>  .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">decipher</span><span>)
+</span><span>  .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">unzip</span><span>)
+</span><span>  .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">writeStream</span><span>);
+</span></code></pre>
+<h3 id="assembiling-a-decryption-function"><a class="zola-anchor" href="#assembiling-a-decryption-function" aria-label="Anchor link for: assembiling-a-decryption-function">Assembiling a decryption function</a></h3>
+<p>Let's put everything together, wrap it in a function, and put it in a file:</p>
+<pre data-lang="plaintext" style="background-color:#2b303b;color:#c0c5ce;" class="language-plaintext "><code class="language-plaintext" data-lang="plaintext"><span>touch decrypt.js
+</span></code></pre>
+<p>Inside <code>decrypt.js</code>:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#b48ead;">const </span><span style="color:#bf616a;">crypto </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">crypto</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">fs </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">fs</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">path </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">path</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">zlib </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">zlib</span><span>&#39;);
+</span><span>
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">getCipherKey </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">./getCipherKey</span><span>&#39;);
+</span><span>
+</span><span style="color:#b48ead;">function </span><span style="color:#8fa1b3;">decrypt</span><span>({ </span><span style="color:#bf616a;">file</span><span>, </span><span style="color:#bf616a;">password </span><span>}) {
+</span><span>  </span><span style="color:#65737e;">// First, get the initialization vector from the file.
+</span><span>  </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">readInitVect </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createReadStream</span><span>(</span><span style="color:#bf616a;">file</span><span>, { end: </span><span style="color:#d08770;">15 </span><span>});
+</span><span>
+</span><span>  </span><span style="color:#b48ead;">let </span><span style="color:#bf616a;">initVect</span><span>;
+</span><span>  </span><span style="color:#bf616a;">readInitVect</span><span>.</span><span style="color:#8fa1b3;">on</span><span>(&#39;</span><span style="color:#a3be8c;">data</span><span>&#39;, (</span><span style="color:#bf616a;">chunk</span><span>) </span><span style="color:#b48ead;">=&gt; </span><span>{
+</span><span>    </span><span style="color:#bf616a;">initVect </span><span>= </span><span style="color:#bf616a;">chunk</span><span>;
+</span><span>  });
+</span><span>
+</span><span>  </span><span style="color:#65737e;">// Once we’ve got the initialization vector, we can decrypt the file.
+</span><span>  </span><span style="color:#bf616a;">readInitVect</span><span>.</span><span style="color:#8fa1b3;">on</span><span>(&#39;</span><span style="color:#a3be8c;">close</span><span>&#39;, () </span><span style="color:#b48ead;">=&gt; </span><span>{
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">cipherKey </span><span>= </span><span style="color:#8fa1b3;">getCipherKey</span><span>(</span><span style="color:#bf616a;">password</span><span>);
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">readStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createReadStream</span><span>(</span><span style="color:#bf616a;">file</span><span>, { start: </span><span style="color:#d08770;">16 </span><span>});
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">decipher </span><span>= </span><span style="color:#bf616a;">crypto</span><span>.</span><span style="color:#8fa1b3;">createDecipheriv</span><span>(&#39;</span><span style="color:#a3be8c;">aes256</span><span>&#39;, </span><span style="color:#bf616a;">cipherKey</span><span>, </span><span style="color:#bf616a;">initVect</span><span>);
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">unzip </span><span>= </span><span style="color:#bf616a;">zlib</span><span>.</span><span style="color:#8fa1b3;">createUnzip</span><span>();
+</span><span>    </span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">writeStream </span><span>= </span><span style="color:#bf616a;">fs</span><span>.</span><span style="color:#8fa1b3;">createWriteStream</span><span>(</span><span style="color:#bf616a;">file </span><span>+ &#39;</span><span style="color:#a3be8c;">.unenc</span><span>&#39;);
+</span><span>
+</span><span>    </span><span style="color:#bf616a;">readStream
+</span><span>      .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">decipher</span><span>)
+</span><span>      .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">unzip</span><span>)
+</span><span>      .</span><span style="color:#8fa1b3;">pipe</span><span>(</span><span style="color:#bf616a;">writeStream</span><span>);
+</span><span>  });
+</span><span>}
+</span></code></pre>
+<h2 id="part-4-one-more-thing"><a class="zola-anchor" href="#part-4-one-more-thing" aria-label="Anchor link for: part-4-one-more-thing">Part 4: One more thing</a></h2>
+<p>I said this would be a CLI program, so let's add one more file:</p>
+<pre data-lang="plaintext" style="background-color:#2b303b;color:#c0c5ce;" class="language-plaintext "><code class="language-plaintext" data-lang="plaintext"><span>touch aes.js
+</span></code></pre>
+<p>Let's focus on handling two commands:</p>
+<pre data-lang="plaintext" style="background-color:#2b303b;color:#c0c5ce;" class="language-plaintext "><code class="language-plaintext" data-lang="plaintext"><span>node aes.js encrypt ./file.txt myPassword
+</span><span>node aes.js decrypt ./file.txt.enc myPassword
+</span></code></pre>
+<p>These two commands have the same arguments in the same position. We just need to know if we want to encrypt or decrypt some file. Inside <code>aes.js</code>:</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span style="color:#65737e;">// import our two functions
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">encrypt </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">./encrypt</span><span>&#39;);
+</span><span style="color:#b48ead;">const </span><span style="color:#bf616a;">decrypt </span><span>= </span><span style="color:#96b5b4;">require</span><span>(&#39;</span><span style="color:#a3be8c;">./decrypt</span><span>&#39;);
+</span><span style="color:#65737e;">// pull the mode, file and password from the command arguments.
+</span><span style="color:#b48ead;">const </span><span>[ </span><span style="color:#bf616a;">mode</span><span>, </span><span style="color:#bf616a;">file</span><span>, </span><span style="color:#bf616a;">password </span><span>] = process.argv.</span><span style="color:#96b5b4;">slice</span><span>(</span><span style="color:#d08770;">2</span><span>);
+</span><span style="color:#b48ead;">if </span><span>(</span><span style="color:#bf616a;">mode </span><span>=== &#39;</span><span style="color:#a3be8c;">encrypt</span><span>&#39;) {
+</span><span>  </span><span style="color:#8fa1b3;">encrypt</span><span>({ </span><span style="color:#bf616a;">file</span><span>, </span><span style="color:#bf616a;">password </span><span>});
+</span><span>}
+</span><span style="color:#b48ead;">if </span><span>(</span><span style="color:#bf616a;">mode </span><span>=== &#39;</span><span style="color:#a3be8c;">decrypt</span><span>&#39;) {
+</span><span>  </span><span style="color:#8fa1b3;">decrypt</span><span>({ </span><span style="color:#bf616a;">file</span><span>, </span><span style="color:#bf616a;">password </span><span>});
+</span><span>}
+</span></code></pre>
+<p>You should be able to run the commands we initially set out to support.</p>
+<h2 id="what-s-next"><a class="zola-anchor" href="#what-s-next" aria-label="Anchor link for: what-s-next">What's next?</a></h2>
+<p>There's a lot that could be added, improved, and extended.</p>
+<h3 id="moar-encryption"><a class="zola-anchor" href="#moar-encryption" aria-label="Anchor link for: moar-encryption">Moar encryption</a></h3>
+<p>We really should 'sign' the file using an HMAC algorithm. HMAC, or Hash Message Authentication Code, is a means of verifying the authenticity of a message and that it's contents haven't been tampered with. This would be a simple extension, but this tutorial was already long as heck. You can read more about it <a href="http://krytosvirus.com/text/HMAC.htm">here</a>.</p>
+<h3 id="error-handling"><a class="zola-anchor" href="#error-handling" aria-label="Anchor link for: error-handling">Error handling</a></h3>
+<p>If you enter an incorrect password, the app crashes with an arcane message. We could add some error handling around each of the streams to know precisely which step failed.</p>
+<h3 id="parameterized-encryption-algorithms"><a class="zola-anchor" href="#parameterized-encryption-algorithms" aria-label="Anchor link for: parameterized-encryption-algorithms">Parameterized encryption algorithms</a></h3>
+<p>Node's encryption algorithms are backed by whatever is available in openssl, and there are a lot of them (189 to be exact, you can see them all by entering <code>openssl list-cipher-algorithms</code> into your terminal). We could allow a user to choose which algorithm they'd like to use. This would require choosing the correct initialization vector and key size, too.</p>
+<h3 id="web-service"><a class="zola-anchor" href="#web-service" aria-label="Anchor link for: web-service">Web service?</a></h3>
+<p>A bit more more of a lofty goal would be utilizing this code as a personal encrypted butt storage solution, but I'll save that idea for another rainy day.</p>
+<p>Thanks for reading!</p>
+
+        </section>
+    </article>
+</main>
+
+
+
+        
+            
+        
+
+        
+    </div>
+</body>
+
+</html>
