@@ -3,6 +3,32 @@ title = "Movies"
 weight = 1
 +++
 
+# 2025
+
+- Venom: The Last Dance (2024)
+  - Your average, trite Marvel movie.
+- Venom: Let There Be Carnage (2021)
+  - Meh. It's okay.
+- Venom (2018)
+  - Pretty goofy. Better than most Marvel movies.
+- Con Air (1997)
+  - Star studded. Pretty silly but fun.
+- Waterworld (1995)
+  - Sorta dumb at times, but the sets really hold up.
+- Mickey 17 (2025)
+  - Really fun. Super solid sci-fi with a nice dash of philosophy thrown in.
+- Nightbitch (2024)
+  - Stressful, but in a good way. Pretty solid.
+- Furiosa: A Mad Max Saga (2024)
+  - Logically inconsistent but explosions are cool.
+- Mad Max: Fury Road (2015)
+  - Pretty good.
+- Boyz n the Hood (1991)
+  - Banger.
+- Deep (2021)
+  - Kinda cool sci-fi but had a lot plot holes.
+- Flow (2025)
+  - Amazing animated film with no dialogue.
 
 # 2024
 

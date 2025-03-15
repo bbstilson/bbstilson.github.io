@@ -5,6 +5,13 @@ weight = 1
 
 Just the highlights. Everything is "scrobbled" on [last.fm](https://www.last.fm/user/pantstown).
 
+# 2025
+
+- stop.drop.rewind - stop.drop.rewind (2024)
+  - #swan-core #pop-punk
+- Bad Bunny - DeBÍ TiRAR MáS FOToS (2025)
+  - #nuevaYOOOOOOL
+
 # 2024
 
 - Kendrick Lamar - GNX (2024)
